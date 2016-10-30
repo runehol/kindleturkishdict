@@ -81,6 +81,7 @@ def gen_dict(dest_file, is_mini, inflection_list, dictionary_file):
     print("Generating dictionary...")
     for lemma_tuple, indices in dict_entries.items():
         formatted_head_word, formatted_desc = lemmas_to_entry[lemma_tuple[0]]
+        formatted_desc = "<ul>\n" + formatted_desc + "</ul>\n" + "<hr\>\n"
         for lemma in lemma_tuple[1:]:
             hw, desc = lemmas_to_entry[lemma]
             desc = "<ul>\n" + desc + "</ul>\n" + "<hr\>\n"
