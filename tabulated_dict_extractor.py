@@ -3,6 +3,8 @@
 import re
 import sqlite3
 from xml.sax.saxutils import escape, quoteattr
+import locale
+locale.setlocale(locale.LC_ALL, 'tr_TR') #make sure string lowercase are turkish aware
 
 
 
@@ -54,13 +56,15 @@ def process(filenames, language, dbfile):
 
             data = """<li> %s <i>%s</i> %s</li>\n""" % (escape(orig_key), wordform, definition)
 
-            c.execute("SELECT definition from definitions WHERE word=?", (orig_key,))
+            processed_key = orig_key.lower()
+
+            c.execute("SELECT definition from definitions WHERE word=?", (processed_key,))
             d = c.fetchone()
             if d:
                 data = d[0] + data
-                c.execute("UPDATE definitions SET definition=? WHERE word=?", (data, orig_key))
+                c.execute("UPDATE definitions SET definition=? WHERE word=?", (data, processed_key))
             else:
-                c.execute("INSERT INTO definitions VALUES (?,?)", (orig_key, data))
+                c.execute("INSERT INTO definitions VALUES (?,?)", (processed_key, data))
 
 
             conn.commit()

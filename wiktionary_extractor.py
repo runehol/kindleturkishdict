@@ -6,6 +6,9 @@ import io
 import sqlite3
 from xml.sax.saxutils import escape, quoteattr
 
+import locale
+locale.setlocale(locale.LC_ALL, 'tr_TR') #make sure string lowercase are turkish aware
+
 section_regex = re.compile(r"(==+)([^=]+)")
 metadata_regex = re.compile(r"\[\[.*\]\]")
 
@@ -123,12 +126,13 @@ def process(filename, language, dbfile):
             n_articles += 1
         elif elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}text":
             if elem.text != None:
-                c.execute("SELECT definition from definitions WHERE word=?", (last_title,))
-                if not c.fetchone():
-                    data = parse_mediawiki(last_title, elem.text, language)
-                    if data != None:
+                processed_key = last_title.lower()
+                data = parse_mediawiki(last_title, elem.text, language)
+                if data != None:
+                    c.execute("SELECT definition from definitions WHERE word=?", (processed_key,))
+                    if not c.fetchone():
                         n_useful_articles += 1
-                        c.execute("INSERT INTO definitions VALUES (?,?)", (last_title, escape(data)))
+                        c.execute("INSERT INTO definitions VALUES (?,?)", (processed_key, escape(data)))
                         conn.commit()
         elem.clear()
 
