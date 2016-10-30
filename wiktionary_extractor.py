@@ -4,6 +4,7 @@ import xml.etree.ElementTree
 import re
 import io
 import sqlite3
+from xml.sax.saxutils import escape, quoteattr
 
 section_regex = re.compile(r"(==+)([^=]+)")
 metadata_regex = re.compile(r"\[\[.*\]\]")
@@ -88,6 +89,25 @@ def parse_mediawiki(title, text, language):
 
 
 
+def create_lookup_index(conn):
+    c = conn.cursor()
+    c.execute('''DROP TABLE IF EXISTS indirectlookups''')
+    c.execute('''DROP INDEX IF EXISTS IDlookupkey''')
+    c.execute('''CREATE TABLE indirectlookups 
+             (key text, lookupkey text)''')
+    c.execute('''CREATE INDEX IDlookupkey ON indirectlookups (key)''')
+
+    c.execute("SELECT word from definitions")
+    all_keys = [v[0] for v in c.fetchall()]
+    for orig_key in all_keys:
+        keys = set(orig_key.split(" "))
+        keys.add(orig_key)
+        for k in keys:
+            c.execute("INSERT INTO indirectlookups VALUES (?,?)", (k, orig_key))
+
+    conn.commit()
+        
+
 
 
 def process(filename, language, dbfile):
@@ -96,15 +116,6 @@ def process(filename, language, dbfile):
     n_useful_articles = 0
     conn = sqlite3.connect(dbfile)
     c = conn.cursor()
-    c.execute('''DROP TABLE IF EXISTS definitions''')
-    c.execute('''DROP INDEX IF EXISTS WDefinitions''')
-    c.execute('''DROP INDEX IF EXISTS IDlookupkey''')
-    c.execute('''CREATE TABLE definitions 
-             (word text, definition text)''')
-    c.execute('''CREATE UNIQUE INDEX WDefinitions ON definitions (word)''')
-    c.execute('''CREATE TABLE indirectlookups 
-             (key text, lookupkey text)''')
-    c.execute('''CREATE INDEX IDlookupkey ON indirectlookups (key)''')
     conn.commit()
     for event, elem in xml.etree.ElementTree.iterparse(filename):
         if elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}title":
@@ -112,19 +123,18 @@ def process(filename, language, dbfile):
             n_articles += 1
         elif elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}text":
             if elem.text != None:
-                data = parse_mediawiki(last_title, elem.text, language)
-                if data != None:
-                    n_useful_articles += 1
-                    c.execute("INSERT INTO definitions VALUES (?,?)", (last_title, data))
-                    keys = set(last_title.split(" "))
-                    keys.add(last_title)
-                    for k in keys:
-                        c.execute("INSERT INTO indirectlookups VALUES (?,?)", (k, last_title))
-                    conn.commit()
+                c.execute("SELECT definition from definitions WHERE word=?", (last_title,))
+                if not c.fetchone():
+                    data = parse_mediawiki(last_title, elem.text, language)
+                    if data != None:
+                        n_useful_articles += 1
+                        c.execute("INSERT INTO definitions VALUES (?,?)", (last_title, escape(data)))
+                        conn.commit()
         elem.clear()
 
     print("Parsed %d articles, %d useful" % (n_articles, n_useful_articles))
     conn.commit()
+    create_lookup_index(conn)
     conn.close()
 
 

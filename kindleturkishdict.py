@@ -42,7 +42,7 @@ def gen_dict(dest_file, is_mini, inflection_list, dictionary_file):
                                 if definition is not None:
                                     formatted_head_word = "<b>%s</b>" % (escape(form))
                                     defn = definition[0]
-                                    formatted_defn = escape(defn)
+                                    formatted_defn = defn
                                     lemmas_to_entry[form] = (formatted_head_word, formatted_defn)
                         
                         for form in defs:
