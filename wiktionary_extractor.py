@@ -98,9 +98,13 @@ def process(filename, language, dbfile):
     c = conn.cursor()
     c.execute('''DROP TABLE IF EXISTS definitions''')
     c.execute('''DROP INDEX IF EXISTS WDefinitions''')
+    c.execute('''DROP INDEX IF EXISTS IDlookupkey''')
     c.execute('''CREATE TABLE definitions 
              (word text, definition text)''')
     c.execute('''CREATE UNIQUE INDEX WDefinitions ON definitions (word)''')
+    c.execute('''CREATE TABLE indirectlookups 
+             (key text, lookupkey text)''')
+    c.execute('''CREATE INDEX IDlookupkey ON indirectlookups (key)''')
     conn.commit()
     for event, elem in xml.etree.ElementTree.iterparse(filename):
         if elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}title":
@@ -112,6 +116,10 @@ def process(filename, language, dbfile):
                 if data != None:
                     n_useful_articles += 1
                     c.execute("INSERT INTO definitions VALUES (?,?)", (last_title, data))
+                    keys = set(last_title.split(" "))
+                    keys.add(last_title)
+                    for k in keys:
+                        c.execute("INSERT INTO indirectlookups VALUES (?,?)", (k, last_title))
                     conn.commit()
         elem.clear()
 

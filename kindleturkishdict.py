@@ -32,20 +32,22 @@ def gen_dict(dest_file, is_mini, inflection_list, dictionary_file):
                 inflection, base_form = m.group(1), m.group(2)
                 if not is_mini or base_form[0:1] == "a":
 
-                    found_entry = True
-                    if not base_form in lemmas_to_entry:
-                        c.execute("SELECT definition from definitions where word=?", (base_form,))
-                        definition = c.fetchone()
-                        if definition is not None:
-                            formatted_head_word = "<b>%s</b>" % (escape(base_form))
-                            defn = definition[0]
-                            formatted_defn = escape(defn)
-                            lemmas_to_entry[base_form] = (formatted_head_word, formatted_defn)
-                        else:
-                            found_entry = False
-                    if found_entry:
-                        if base_form not in index_to_lemmas[inflection]:
-                            index_to_lemmas[inflection].append(base_form)
+                    c.execute("SELECT lookupkey FROM indirectlookups WHERE key=?", (base_form,))
+                    defs = [row[0] for row in c.fetchall()]
+                    if len(defs):
+                        for form in defs:
+                            if not form in lemmas_to_entry:
+                                c.execute("SELECT definition from definitions where word=?", (form,))
+                                definition = c.fetchone()
+                                if definition is not None:
+                                    formatted_head_word = "<b>%s</b>" % (escape(form))
+                                    defn = definition[0]
+                                    formatted_defn = escape(defn)
+                                    lemmas_to_entry[form] = (formatted_head_word, formatted_defn)
+                        
+                        for form in defs:
+                            if form not in index_to_lemmas[inflection]:
+                                index_to_lemmas[inflection].append(form)
                     else:
                         not_found_lemmas[base_form] = True
 
@@ -73,7 +75,7 @@ def gen_dict(dest_file, is_mini, inflection_list, dictionary_file):
     dict_entries = defaultdict(list)
         
     for index, lemma_list in index_to_lemmas.items():
-        lemma_tuple = tuple(sorted(lemma_list))
+        lemma_tuple = tuple(sorted(lemma_list, key=lambda item: (item.count(" "), item)))
         dict_entries[lemma_tuple].append(index)
 
     print("Generating dictionary...")
