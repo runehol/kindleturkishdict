@@ -53,13 +53,13 @@ def process_dict_html(c, word, html_doc):
                 data = """<li> %s <i>%s</i> %s</li>\n""" % (escape(orig_key), wordform, definition)
                 processed_key = orig_key.lower()
 
-                #c.execute("SELECT definition from definitions WHERE word=?", (processed_key,))
-                #d = c.fetchone()
-                #if d:
-                #    data = d[0] + data
-                #    c.execute("UPDATE definitions SET definition=? WHERE word=?", (data, processed_key))
-                #else:
-                #    c.execute("INSERT INTO definitions VALUES (?,?)", (processed_key, data))
+                c.execute("SELECT definition from definitions WHERE word=?", (processed_key,))
+                d = c.fetchone()
+                if d:
+                    data = d[0] + data
+                    c.execute("UPDATE definitions SET definition=? WHERE word=?", (data, processed_key))
+                else:
+                    c.execute("INSERT INTO definitions VALUES (?,?)", (processed_key, data))
                 orig_key = word
 
     if not found_something:
