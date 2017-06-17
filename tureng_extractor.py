@@ -77,17 +77,20 @@ def process(words, dbfile, recreate_db=False):
     for word in words:
         url = "http://tureng.com/en/turkish-english/" + urllib.parse.quote_plus(word)
         try:
-            c = conn.cursor()
-            c.execute("SELECT word from alreadylookedup WHERE word=?", (word,))
-            res = c.fetchone()
-            if not res:
-                print("fetching", word)
-                time.sleep(random.uniform(0.2, 0.4))
+            try:
+                c = conn.cursor()
+                c.execute("SELECT word from alreadylookedup WHERE word=?", (word,))
+                res = c.fetchone()
+                if not res:
+                    print("fetching", word)
+                    time.sleep(random.uniform(0.2, 0.4))
                            
-                html_doc = urllib.request.urlopen(url).read()
-                process_tureng_html(c, word, html_doc)
-                c.execute("INSERT INTO alreadylookedup VALUES (?)", (word,))
-                conn.commit()
+                    html_doc = urllib.request.urlopen(url).read()
+                    process_tureng_html(c, word, html_doc)
+                    c.execute("INSERT INTO alreadylookedup VALUES (?)", (word,))
+                    conn.commit()
+            except UnicodeEncodeError as e:
+                print("got Unicode error", url, e)
         except urllib.error.URLError as e:
             print("got url error for url", url, e)
 
